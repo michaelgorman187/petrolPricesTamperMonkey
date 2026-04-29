@@ -36,10 +36,10 @@
             const diff40 = ((diffPence / 100) * 40).toFixed(2);
 
             // Build label text
-            let labelText = `£${cost40} for 40 litres`;
+            let labelText = `£${cost40}`;
 
             if (diffPence > 0) {
-                labelText += ` £${diff40} for 40L`;
+                labelText += ` £${diff40}`;
             } else {
                 labelText += `\nCheapest option`;
             }
