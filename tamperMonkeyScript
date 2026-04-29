@@ -1,0 +1,105 @@
+// ==UserScript==
+// @name         Fuel Price Enhancer + Colour Coding
+// @namespace    http://tampermonkey.net/
+// @version      1.1
+// @description  Adds 40L cost, comparison, and colour-coded tooltips above fuel markers
+// @match        https://www.petrolprices.com/app/map*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function enhancePrices() {
+        const priceDivs = Array.from(document.querySelectorAll('div[data-content$="p"]'));
+        if (priceDivs.length === 0) return;
+
+        // Collect all prices
+        const prices = priceDivs
+            .map(div => parseFloat(div.getAttribute('data-content')))
+            .filter(n => !isNaN(n));
+
+        if (prices.length === 0) return;
+
+        const cheapest = Math.min(...prices);
+        const mostExpensive = Math.max(...prices);
+
+        priceDivs.forEach(div => {
+            const pricePence = parseFloat(div.getAttribute('data-content'));
+            if (isNaN(pricePence)) return;
+
+            // Cost for 40 litres
+            const cost40 = ((pricePence / 100) * 40).toFixed(2);
+
+            // Difference vs cheapest
+            const diffPence = pricePence - cheapest;
+            const diff40 = ((diffPence / 100) * 40).toFixed(2);
+
+            // Build label text
+            let labelText = `£${cost40} for 40 litres`;
+
+            if (diffPence > 0) {
+                labelText += ` £${diff40} for 40L`;
+            } else {
+                labelText += `\nCheapest option`;
+            }
+
+            // Determine colour
+            let bgColour = "white";
+            let borderColour = "#333";
+
+            if (pricePence === cheapest) {
+                bgColour = "#b6f7b0";
+                borderColour = "#2d8a1f";
+            } else if (pricePence === mostExpensive) {
+                bgColour = "#ffb3b3";
+                borderColour = "#b30000";
+            } else {
+                bgColour = "#ffd9a3";
+                borderColour = "#cc7a00";
+            }
+
+            // Create floating label
+            const label = document.createElement('div');
+            label.textContent = labelText;
+
+            // Style the floating box
+            Object.assign(label.style, {
+                position: 'absolute',
+                bottom: '100%',
+                left: '50%',
+                transform: 'translateX(-50%) translateY(-6px)',
+                background: bgColour,
+                padding: '6px 10px',
+                border: `1px solid ${borderColour}`,
+                borderRadius: '6px',
+                whiteSpace: 'pre-line',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                color: 'black',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                zIndex: '99999',
+                pointerEvents: 'none'
+            });
+
+            // Ensure marker can anchor the label
+            div.style.position = 'relative';
+
+            // Remove old labels if script reruns
+            const oldLabel = div.querySelector('.fuel-tooltip');
+            if (oldLabel) oldLabel.remove();
+
+            label.classList.add('fuel-tooltip');
+            div.appendChild(label);
+        });
+    }
+
+    // Run once after page load
+    window.addEventListener('load', () => {
+        setTimeout(enhancePrices, 1000);
+    });
+
+    // Also rerun periodically in case the map loads markers dynamically
+    setInterval(enhancePrices, 2000);
+
+})();
